@@ -22,7 +22,7 @@ typedef struct
     union
     {
         pointLight point;
-    };
+    } l;
 } light;
 
 

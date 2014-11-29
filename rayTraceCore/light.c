@@ -10,7 +10,7 @@ void getRayToLight(const point3f start, const light l, ray* r)
         case POINT:
         {
             vector3f_copy(r->origin, start);
-            vector3f_sub_new(r->dir, l.point.location, start);
+            vector3f_sub_new(r->dir, l.l.point.location, start);
             vector3f_normalize(r->dir);
             r->tmax = INFINITY;
             r->tmin = 0.0f;

@@ -41,7 +41,7 @@
 #define SCENE 0
 #define SHADING 0
 
-const light l = {.type = POINT, .ambinentFactor = .05f, .point = {.color = {1, 1, 1}, .location = {3, 5, -15}}};
+const light l = {.type = POINT, .ambinentFactor = .05f, .l.point = {.color = {1, 1, 1}, .location = {3, 5, -15}}};
 
 void writeImage(char *filename, int width, int height, char *data)
 {
