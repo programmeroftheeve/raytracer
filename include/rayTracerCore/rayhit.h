@@ -5,7 +5,7 @@
 #include <util/vector.h>
 #include <rayTracerCore/material.h>
 
-typedef struct obj object;
+struct obj;
 
 typedef struct
 {
@@ -16,7 +16,7 @@ typedef struct
     vector3f normal;
     ray originRay;
     float offsetError;
-    object* objects;
+    struct obj* objects;
 } rayHit;
 
 void printRayHit(const rayHit);
