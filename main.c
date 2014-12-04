@@ -31,17 +31,21 @@
 #include <util/colors.h>
 #include <util/imageio.h>
 #include <rayTracerCore/light.h>
+#include <rayTracerCore/material.h>
 
-#define XRES 512
-#define YRES 512
+#define XRES 512*2
+#define YRES 512*2
 #define XBREAK 0
 #define YBREAK 256
-#define SAMPLES_X 9
-#define SAMPLES_Y 9
+#define SAMPLES_X 1
+#define SAMPLES_Y 1
 #define SCENE 0
 #define SHADING 0
 
-const light l = {.type = POINT, .ambinentFactor = .05f, .l.point = {.color = {1, 1, 1}, .location = {3, 5, -15}}};
+const light l = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {0, 0, 0}}};
+vector3f lookat = {0, 0, -1};
+vector3f lookup = {0, 1, 0};
+vector3f camPos = {0, 0, 0};
 
 void writeImage(char *filename, int width, int height, char *data)
 {
@@ -80,12 +84,6 @@ void trace(const ray r, rayHit *rh, const object *objects)
 {
     rh->hit = false;
     rh->mat = EMPTYNESS;
-
-    if (rh->depth > 10)
-    {
-        return;
-    }
-
     rayHit testrh;
     testrh.hit = false;
     testrh.depth = rh->depth;
@@ -111,8 +109,14 @@ void trace(const ray r, rayHit *rh, const object *objects)
         }
     }
     if (rh->hit) DEBUGOUT(printf("\n"));
+
+
     if (rh->hit && rh->mat.reflect)
     {
+        if (rh->depth > 10)
+        {
+            return;
+        }
         ray reflect;
         vector3f offset = {};
         vector3f_scaleMul_new(offset, rh->normal, rh->offsetError);
@@ -123,7 +127,7 @@ void trace(const ray r, rayHit *rh, const object *objects)
     }
 }
 
-void buildScene(object **list)
+void buildScene1(object **list)
 {
     DPRINT("Building Scene\n");
     material refl = {.reflect = true, .color = {0, 0, 0}};
@@ -136,6 +140,12 @@ void buildScene(object **list)
     float sph1Radius = 2;
     material sph1Mat = refl;
     addToObjectList(list, createSphere(sph1Mat, sph1Radius, sph1Center));
+    
+     // Spheres
+    vector3f sph4Center = {1, 1, -18};
+    float sph4Radius = 3;
+    material sph4Mat = refl;
+    addToObjectList(list, createSphere(sph4Mat, sph4Radius, sph4Center));
 
     vector3f sph2Center = {3, -1, -14};
     float sph2Radius = 1;
@@ -183,6 +193,116 @@ void buildScene(object **list)
 
 }
 
+void buildScene2(object **list)
+{
+    DPRINT("Building Scene\n");
+    material refl = {.reflect = true, .color = {0, 0, 0}};
+    material red = {.reflect = false, .color = {1, 0, 0}};
+    material blue = {.reflect = false, .color = {0, 0, 1}};
+    material white = {.reflect = false, .color = {1, 1, 1}};
+
+    // Spheres
+    vector3f sph1Center = {0, 0, 0};
+    float sph1Radius = 0;
+    material sph1Mat = blue;
+
+    time_t t;
+    /* Intializes random number generator */
+    srand((unsigned) time(&t));
+    for(int i = 0; i < 1000; i++)
+    {
+        float locationR = mapToRangef(((float)rand()/(float)(RAND_MAX)), 0, 1, 4, 18);
+        float phi = (float) (mapToRangef(((float)rand()/(float)(RAND_MAX)), 0, 1, -180, 180) * M_PI / 180);
+        float rnd = mapToRangef(((float)rand()/(float)(RAND_MAX)), 0, 1, .4, .96);
+        float theta = acosf(2*rnd - 1);
+        sph1Center[0] = locationR * sinf(theta) * cosf(phi);
+        sph1Center[1] = locationR * cosf(theta);
+        sph1Center[2] = -locationR * sinf(theta) * sinf(phi);
+        sph1Radius = mapToRangef(((float)rand()/(float)(RAND_MAX)), 0, 1, .1, .5);
+        sph1Mat.reflect = (bool) (rand() & 2);
+        for(int x = 0; x < 3; x++) sph1Mat.color[x] = ((float)rand()/(float)(RAND_MAX));
+        addToObjectList(list, createSphere(sph1Mat, sph1Radius, sph1Center));
+    }
+
+//    //back wall
+//    vector3f back1points[3] = {
+//        {-8, -10, -10*2},
+//        {8,  -10, -10*2},
+//        {8,  10, -10*2}};
+//    vector3f back2points[3] = {
+//        {-8, -10, -10*2},
+//        {8,  10, -10*2},
+//        {-8, 10, -10*2}};
+//    material backMat = red;
+//    addToObjectList(list, createTriangle(backMat, back1points[0], back1points[1], back1points[2]));
+//    addToObjectList(list, createTriangle(backMat, back2points[0], back2points[1], back2points[2]));
+//
+//    //back wall
+//    vector3f front1points[3] = {
+//        {-8, -10+8, 10*2},
+//        {-8,  10+8, 10*2},
+//        {8,  -10+8, 10*2}};
+//    vector3f front2points[3] = {
+//        {-8, 10+8, 10*2},
+//        {8,  10+8, 10*2},
+//        {8, -10+8, 10*2}};
+//    material frontMat = blue;
+//    addToObjectList(list, createTriangle(frontMat, front1points[0], front1points[1], front1points[2]));
+//    addToObjectList(list, createTriangle(frontMat, front2points[0], front2points[1], front2points[2]));
+//
+    //floor
+    vector3f floor1points[3] = {
+        {-8, -10+8, 10*2},
+        {8,  -10+8, 10*2},
+        {8,  -10+8, -10*2}};
+    vector3f floor2points[3] = {
+        {-8, -10+8,  10*2},
+        { 8, -10+8, -10*2},
+        {-8, -10+8, -10*2}};
+    material floorMat = white;
+    addToObjectList(list, createTriangle(floorMat, floor1points[0], floor1points[1], floor1points[2]));
+    addToObjectList(list, createTriangle(floorMat, floor2points[0], floor2points[1], floor2points[2]));
+//
+//    //top
+//    vector3f top1points[3] = {
+//        {8,  10+8, 10*2},
+//        {-8, 10+8, 10*2},
+//        {8,  10+8, -10*2}};
+//    vector3f top2points[3] = {
+//        { 8, 10+8, -10*2},
+//        {-8, 10+8,  10*2},
+//        {-8, 10+8, -10*2}};
+//    material topMat = white;
+//    addToObjectList(list, createTriangle(topMat, top1points[0], top1points[1], top1points[2]));
+//    addToObjectList(list, createTriangle(topMat, top2points[0], top2points[1], top2points[2]));
+//
+//    // right wall
+//    vector3f right1points[3] = {
+//        {8, -10+8, -10*2},
+//        {8, -10+8, 10*2},
+//        {8, 10+8, -10*2}};
+//    vector3f right2points[3] = {
+//        {8, -10+8, 10*2},
+//        {8, 10+8, 10*2},
+//        {8, 10+8, -10*2}};
+//    material rightMat = red;
+//    addToObjectList(list, createTriangle(rightMat, right1points[0], right1points[1], right1points[2]));
+//    addToObjectList(list, createTriangle(rightMat, right2points[0], right2points[1], right2points[2]));
+//
+//    // left wall
+//    vector3f left1points[3] = {
+//        {-8, -10+8, 10*2},
+//        {-8, 10+8, -10*2},
+//        {-8, 10+8, 10*2}};
+//    vector3f left2points[3] = {
+//        {-8, -10+8, 10*2},
+//        {-8, -10+8, -10*2},
+//        {-8, 10+8, -10*2}};
+//    material leftMat = red;
+//    addToObjectList(list, createTriangle(leftMat, left1points[0], left1points[1], left1points[2]));
+//    addToObjectList(list, createTriangle(leftMat, left2points[0], left2points[1], left2points[2]));
+}
+
 int main(int argc, char **argv)
 {
     for (int i = 0; i < argc; i++)
@@ -191,9 +311,7 @@ int main(int argc, char **argv)
 
     char *image = calloc(XRES * YRES * 3, sizeof(char));
 
-    vector3f lookat = {0, 0, -1};
-    vector3f lookup = {0, 1, 0};
-    vector3f camPos = {0, 0, 0};
+
 
     camera cam;
     setCamera(&cam, camPos, lookat, lookup);
@@ -215,8 +333,10 @@ int main(int argc, char **argv)
     vector3f trianglePoints[3] = {{0,1,-3},{-1,-1,-3},{1,-1,-3}};
     material triangleMaterial = {.color = { 1, 1, 1}, .reflect = true};
     addToObjectList(&objects, createTriangle(triangleMaterial, trianglePoints[0], trianglePoints[1], trianglePoints[2]));
+    #elif SCENE == 3
+    buildScene1(&objects);
     #else
-    buildScene(&objects);
+    buildScene2(&objects);
 #endif
     printf(KBLU"Scene: \n"KNRM);
     printObjectList(objects);
@@ -269,7 +389,11 @@ int main(int argc, char **argv)
         }
     }
     cleanObjectList(&objects);
+    #if SCENE == 3
     writeImage("reference.png", XRES, YRES, image);
+    #else
+    writeImage("scene.png", XRES, YRES, image);
+    #endif
     free(image);
     return 0;
 }

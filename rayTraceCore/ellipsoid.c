@@ -73,7 +73,7 @@ bool ellipsoidHit(const ray r, const object *obj, float *time, rayHit *rayH)
     vector3f_set(rayH->normal, normalX, normalY, normalZ);
     vector3f_normalize(rayH->normal);
     rayH->originRay = r;
-    rayH->offsetError = .0001;
+    rayH->offsetError = .1;
     return true;
 }
 

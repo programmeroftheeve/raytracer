@@ -51,7 +51,7 @@ bool triangleHit(const ray r, const object *o, float *time, rayHit *rayH)
     vector3f_cross_new(rayH->normal, e1, e2);
     vector3f_normalize(rayH->normal);
     rayH->originRay = r;
-    rayH->offsetError = .0001;
+    rayH->offsetError = .1;
     return true;
 }
 
