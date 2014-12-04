@@ -32,9 +32,10 @@
 #include <util/imageio.h>
 #include <rayTracerCore/light.h>
 #include <rayTracerCore/material.h>
+#include <getopt.h>
 
-#define XRES 512*2
-#define YRES 512*2
+#define XRES 512
+#define YRES 512
 #define XBREAK 0
 #define YBREAK 256
 #define SAMPLES_X 1
@@ -42,10 +43,16 @@
 #define SCENE 0
 #define SHADING 0
 
-const light l = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {0, 0, 0}}};
+const light refLight = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {3, 5, -15}}};
+const light sceneLight = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {0, 0.0f, 0}}};
+light l;
 vector3f lookat = {0, 0, -1};
 vector3f lookup = {0, 1, 0};
 vector3f camPos = {0, 0, 0};
+int buildRef = 0;
+int xres = XRES, yres = YRES;
+float width = 2, height = 2;
+char* file = "scene.png";
 
 void writeImage(char *filename, int width, int height, char *data)
 {
@@ -141,12 +148,6 @@ void buildScene1(object **list)
     material sph1Mat = refl;
     addToObjectList(list, createSphere(sph1Mat, sph1Radius, sph1Center));
     
-     // Spheres
-    vector3f sph4Center = {1, 1, -18};
-    float sph4Radius = 3;
-    material sph4Mat = refl;
-    addToObjectList(list, createSphere(sph4Mat, sph4Radius, sph4Center));
-
     vector3f sph2Center = {3, -1, -14};
     float sph2Radius = 1;
     material sph2Mat = refl;
@@ -224,32 +225,6 @@ void buildScene2(object **list)
         addToObjectList(list, createSphere(sph1Mat, sph1Radius, sph1Center));
     }
 
-//    //back wall
-//    vector3f back1points[3] = {
-//        {-8, -10, -10*2},
-//        {8,  -10, -10*2},
-//        {8,  10, -10*2}};
-//    vector3f back2points[3] = {
-//        {-8, -10, -10*2},
-//        {8,  10, -10*2},
-//        {-8, 10, -10*2}};
-//    material backMat = red;
-//    addToObjectList(list, createTriangle(backMat, back1points[0], back1points[1], back1points[2]));
-//    addToObjectList(list, createTriangle(backMat, back2points[0], back2points[1], back2points[2]));
-//
-//    //back wall
-//    vector3f front1points[3] = {
-//        {-8, -10+8, 10*2},
-//        {-8,  10+8, 10*2},
-//        {8,  -10+8, 10*2}};
-//    vector3f front2points[3] = {
-//        {-8, 10+8, 10*2},
-//        {8,  10+8, 10*2},
-//        {8, -10+8, 10*2}};
-//    material frontMat = blue;
-//    addToObjectList(list, createTriangle(frontMat, front1points[0], front1points[1], front1points[2]));
-//    addToObjectList(list, createTriangle(frontMat, front2points[0], front2points[1], front2points[2]));
-//
     //floor
     vector3f floor1points[3] = {
         {-8, -10+8, 10*2},
@@ -262,138 +237,163 @@ void buildScene2(object **list)
     material floorMat = white;
     addToObjectList(list, createTriangle(floorMat, floor1points[0], floor1points[1], floor1points[2]));
     addToObjectList(list, createTriangle(floorMat, floor2points[0], floor2points[1], floor2points[2]));
-//
-//    //top
-//    vector3f top1points[3] = {
-//        {8,  10+8, 10*2},
-//        {-8, 10+8, 10*2},
-//        {8,  10+8, -10*2}};
-//    vector3f top2points[3] = {
-//        { 8, 10+8, -10*2},
-//        {-8, 10+8,  10*2},
-//        {-8, 10+8, -10*2}};
-//    material topMat = white;
-//    addToObjectList(list, createTriangle(topMat, top1points[0], top1points[1], top1points[2]));
-//    addToObjectList(list, createTriangle(topMat, top2points[0], top2points[1], top2points[2]));
-//
-//    // right wall
-//    vector3f right1points[3] = {
-//        {8, -10+8, -10*2},
-//        {8, -10+8, 10*2},
-//        {8, 10+8, -10*2}};
-//    vector3f right2points[3] = {
-//        {8, -10+8, 10*2},
-//        {8, 10+8, 10*2},
-//        {8, 10+8, -10*2}};
-//    material rightMat = red;
-//    addToObjectList(list, createTriangle(rightMat, right1points[0], right1points[1], right1points[2]));
-//    addToObjectList(list, createTriangle(rightMat, right2points[0], right2points[1], right2points[2]));
-//
-//    // left wall
-//    vector3f left1points[3] = {
-//        {-8, -10+8, 10*2},
-//        {-8, 10+8, -10*2},
-//        {-8, 10+8, 10*2}};
-//    vector3f left2points[3] = {
-//        {-8, -10+8, 10*2},
-//        {-8, -10+8, -10*2},
-//        {-8, 10+8, -10*2}};
-//    material leftMat = red;
-//    addToObjectList(list, createTriangle(leftMat, left1points[0], left1points[1], left1points[2]));
-//    addToObjectList(list, createTriangle(leftMat, left2points[0], left2points[1], left2points[2]));
+}
+
+void parseArguments(int argc, char **argv)
+{
+    while (1)
+    {
+        static struct option long_options[] =
+            {
+                /* These options set a flag. */
+                {"ref",     no_argument,  &buildRef, 1},
+                /* These options don’t set a flag.
+                   We distinguish them by their indices. */
+                {"xres",    required_argument,  0, 'x'},
+                {"yres",    required_argument,  0, 'y'},
+                {"width",   required_argument,  0, 'w'},
+                {"height",  required_argument,  0, 'h'},
+                {"file",    required_argument,  0, 'f'},
+                {0, 0, 0, 0}
+            };
+        /* getopt_long stores the option index here. */
+        int option_index = 0;
+
+        int c = getopt_long (argc, argv, "x:y:f:",
+                         long_options, &option_index);
+
+        /* Detect the end of the options. */
+        if (c == -1)
+            break;
+
+        switch (c)
+        {
+            case 0:
+                /* If this option set a flag, do nothing else now. */
+                if (long_options[option_index].flag != 0)
+                    break;
+                printf ("option %s", long_options[option_index].name);
+                if (optarg)
+                    printf (" with arg %s", optarg);
+                printf ("\n");
+                break;
+
+            case 'x':
+                printf ("option -x with value `%s'\n", optarg);
+                xres = atoi(optarg);
+                break;
+
+            case 'y':
+                printf ("option -x with value `%s'\n", optarg);
+                yres = atoi(optarg);
+                break;
+
+            case 'w':
+                printf ("option -c with value `%s'\n", optarg);
+                width = (float) atof(optarg);
+                break;
+
+            case 'h':
+                printf ("option -d with value `%s'\n", optarg);
+                height = (float) atof(optarg);
+                break;
+
+            case 'f':
+                printf ("option -f with value `%s'\n", optarg);
+                file = optarg;
+                break;
+
+            case '?':
+                /* getopt_long already printed an error message. */
+                exit(1);
+                break;
+
+            default:
+                abort ();
+        }
+    }
 }
 
 int main(int argc, char **argv)
 {
-    for (int i = 0; i < argc; i++)
-        printf("%s ", argv[i]);
-    printf("\n");
-
-    char *image = calloc(XRES * YRES * 3, sizeof(char));
+    parseArguments(argc, argv);
+    char *image = calloc((size_t) (xres * yres * 3), sizeof(char));
 
 
 
     camera cam;
     setCamera(&cam, camPos, lookat, lookup);
-    perspective p = {.cam = cam, .height = 2, .width = 2, .res_x = XRES, .res_y = YRES, .viewPlaneDistance = 2};
+    perspective p = {.cam = cam, .height = height, .width = width, .res_x = (unsigned int) xres, .res_y = (unsigned int) yres, .viewPlaneDistance = 2};
     object *objects = NULL;
 
-    //Build List
-#if SCENE == 1
-    vector3f sphere1center = { 0, 0, -3};
-    vector3f sphere2center = { .25, .25, -1};
-    material sphere1Materia(l = {.color = { 1, 1, 1}, .reflect = false};
-    material sphere2Material = {.color = { .5, 0, 0}, .reflect = false};
-    addToObjectList(&objects, createSphere(sphere1Material , 1, sphere1center));
-    addToObjectList(&objects, createSphere(sphere2Material , .1, sphere2center));
-    #elif SCENE == 2
-    vector3f sphere2center = { .25, .25, -2};
-    material sphere2Material = {.color = { .5, 0, 0}, .reflect = false};
-    addToObjectList(&objects, createSphere(sphere2Material , .1, sphere2center));
-    vector3f trianglePoints[3] = {{0,1,-3},{-1,-1,-3},{1,-1,-3}};
-    material triangleMaterial = {.color = { 1, 1, 1}, .reflect = true};
-    addToObjectList(&objects, createTriangle(triangleMaterial, trianglePoints[0], trianglePoints[1], trianglePoints[2]));
-    #elif SCENE == 3
-    buildScene1(&objects);
-    #else
-    buildScene2(&objects);
-#endif
-    printf(KBLU"Scene: \n"KNRM);
-    printObjectList(objects);
-    for (unsigned int y = 0; y < p.res_y; y++)
+    do
     {
-        for (unsigned int x = 0; x < p.res_x; x++)
+        //Build List
+        if (buildRef)
         {
-            if (x == XBREAK && y == YBREAK)
-            {
-                volatile int b = 1;
-                b++;
-            }
-            sampler samples;
-            getSampler(&samples, SAMPLES_X, SAMPLES_Y, p, x, y, GLOBAL);
-            rayHit samplesRayHits[samples.numOfSamplesX * samples.numOfSamplesY];
-            for (unsigned int sample = 0; sample < samples.numOfSamplesX * samples.numOfSamplesY; sample++)
-            {
-                samplesRayHits[sample].depth = 0;
-                trace(samples.rays[sample], &samplesRayHits[sample], objects);
-                samplesRayHits[sample].objects = objects;
-                if (samplesRayHits[sample].hit)
-                {
-                    float ambinentFactor = l.ambinentFactor;
-                    float diffuse = getDiffuseFactor(samplesRayHits[sample], l);
-                    float specular = getSpecularFactor(samplesRayHits[sample], l);
-                    if (inShadow(samplesRayHits[sample], l))
-                    {
-                        DEBUGOUT(printf("In Shadow"));
-                        diffuse = 0.0f;
-                        specular = 0.0f;
-                    }
-                    DEBUGOUT(printf("Ambinent: %4.4f Diffuse: %4.4f Specular: %4.4f\n", ambinentFactor, diffuse, specular));
-                    vector3f ambientColor = {}, diffuseColor = {}, specularColor = {};
-                    vector3f_scaleMul_new(ambientColor, samplesRayHits[sample].mat.color, ambinentFactor);
-                    vector3f_scaleMul_new(diffuseColor, samplesRayHits[sample].mat.color, diffuse);
-                    vector3f_scaleMul_new(specularColor, samplesRayHits[sample].mat.color, specular);
-                    vector3f_copy(samplesRayHits[sample].mat.color, ambientColor);
-                    vector3f_add(samplesRayHits[sample].mat.color, diffuseColor);
-                    vector3f_add(samplesRayHits[sample].mat.color, specularColor);
-                }
-            }
-            vector3f color = {};
-            getFinalColor(color, samplesRayHits, samples.numOfSamplesX * samples.numOfSamplesY);
-#define MIN(x, y) ((x < y) ? x : y)
-            image[XY2INDEX(x, y, 0, XRES, 3)] = (char) mapToRangef(MIN(color[0], 1), 0, 1, 0, 255);
-            image[XY2INDEX(x, y, 1, XRES, 3)] = (char) mapToRangef(MIN(color[1], 1), 0, 1, 0, 255);
-            image[XY2INDEX(x, y, 2, XRES, 3)] = (char) mapToRangef(MIN(color[2], 1), 0, 1, 0, 255);
-#undef MIN
-            cleanSampler(&samples);
+            l = refLight;
+            file = "reference.png";
+            buildScene1(&objects);
         }
-    }
-    cleanObjectList(&objects);
-    #if SCENE == 3
-    writeImage("reference.png", XRES, YRES, image);
-    #else
-    writeImage("scene.png", XRES, YRES, image);
-    #endif
+        else
+        {
+            l = sceneLight;
+            buildScene2(&objects);
+        }
+        buildRef++;
+
+
+        for (unsigned int y = 0; y < p.res_y; y++)
+        {
+            for (unsigned int x = 0; x < p.res_x; x++)
+            {
+                if (x == XBREAK && y == YBREAK)
+                {
+                    volatile int b = 1;
+                    b++;
+                }
+                sampler samples;
+                getSampler(&samples, SAMPLES_X, SAMPLES_Y, p, x, y, GLOBAL);
+                rayHit samplesRayHits[samples.numOfSamplesX * samples.numOfSamplesY];
+                for (unsigned int sample = 0; sample < samples.numOfSamplesX * samples.numOfSamplesY; sample++)
+                {
+                    samplesRayHits[sample].depth = 0;
+                    trace(samples.rays[sample], &samplesRayHits[sample], objects);
+                    samplesRayHits[sample].objects = objects;
+                    if (samplesRayHits[sample].hit)
+                    {
+                        float ambinentFactor = l.ambinentFactor;
+                        float diffuse = getDiffuseFactor(samplesRayHits[sample], l);
+                        float specular = getSpecularFactor(samplesRayHits[sample], l);
+                        if (inShadow(samplesRayHits[sample], l))
+                        {
+                            DEBUGOUT(printf("In Shadow"));
+                            diffuse = 0.0f;
+                            specular = 0.0f;
+                        }
+                        DEBUGOUT(printf("Ambinent: %4.4f Diffuse: %4.4f Specular: %4.4f\n", ambinentFactor, diffuse, specular));
+                        vector3f ambientColor = {}, diffuseColor = {}, specularColor = {};
+                        vector3f_scaleMul_new(ambientColor, samplesRayHits[sample].mat.color, ambinentFactor);
+                        vector3f_scaleMul_new(diffuseColor, samplesRayHits[sample].mat.color, diffuse);
+                        vector3f_scaleMul_new(specularColor, samplesRayHits[sample].mat.color, specular);
+                        vector3f_copy(samplesRayHits[sample].mat.color, ambientColor);
+                        vector3f_add(samplesRayHits[sample].mat.color, diffuseColor);
+                        vector3f_add(samplesRayHits[sample].mat.color, specularColor);
+                    }
+                }
+                vector3f color = {};
+                getFinalColor(color, samplesRayHits, samples.numOfSamplesX * samples.numOfSamplesY);
+#define MIN(x, y) ((x < y) ? x : y)
+                image[XY2INDEX(x, y, 0, XRES, 3)] = (char) mapToRangef(MIN(color[0], 1), 0, 1, 0, 255);
+                image[XY2INDEX(x, y, 1, XRES, 3)] = (char) mapToRangef(MIN(color[1], 1), 0, 1, 0, 255);
+                image[XY2INDEX(x, y, 2, XRES, 3)] = (char) mapToRangef(MIN(color[2], 1), 0, 1, 0, 255);
+#undef MIN
+                cleanSampler(&samples);
+            }
+        }
+        cleanObjectList(&objects);
+        writeImage(file, xres, yres, image);
+    } while(buildRef < 2);
     free(image);
     return 0;
 }
