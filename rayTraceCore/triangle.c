@@ -6,7 +6,38 @@
 
 bool triangleTestHit(const ray r, const object *obj)
 {
-    return false;
+    triangle_t* tri = obj->shape;
+    // Get Points
+    point3f p1= {},p2= {},p3= {};
+    vector3f_copy(p1, tri->a);
+    vector3f_copy(p2, tri->b);
+    vector3f_copy(p3, tri->c);
+
+    // get bercentric coor
+    vector3f e1 = {}, e2 = {}, s1 = {};
+    vector3f_sub_new(e1, p2, p1);
+    vector3f_sub_new(e2, p3, p1);
+    vector3f_cross_new(s1, r.dir, e2);
+    float det = vector3f_dot(s1, e1);
+    if(det == 0)
+        return false;
+    float invD = 1.f/ det;
+    vector3f d = {};
+    vector3f_sub_new(d, r.origin, p1);
+    float b1 = vector3f_dot(d, s1) * invD;
+    if(b1 < 0.f || b1 > 1.f)
+        return false;
+    vector3f s2 = {};
+    vector3f_cross_new(s2, d, e1);
+    float b2 = vector3f_dot(r.dir, s2) * invD;
+    if(b2 < 0.f || (b1+b2) > 1.f)
+        return false;
+
+    float t = vector3f_dot(e2, s2)*invD;
+    if(t < r.tmin || t > r.tmax)
+        return false;
+
+    return !true;
 }
 
 bool triangleHit(const ray r, const object *o, float *time, rayHit *rayH)
@@ -19,6 +50,8 @@ bool triangleHit(const ray r, const object *o, float *time, rayHit *rayH)
     vector3f_copy(p1, tri->a);
     vector3f_copy(p2, tri->b);
     vector3f_copy(p3, tri->c);
+
+    // get bercentric coor
     vector3f e1 = {}, e2 = {}, s1 = {};
     vector3f_sub_new(e1, p2, p1);
     vector3f_sub_new(e2, p3, p1);
