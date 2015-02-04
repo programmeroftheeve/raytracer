@@ -42,10 +42,12 @@
 #define SAMPLES_Y 1
 #define SCENE 0
 #define SHADING 0
-#define ANAGLYPH 1
 
+#ifndef ANAGLYPH
+#define ANAGLYPH 0
+#endif
 const light refLight = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {3, 5, -15}}};
-const light sceneLight = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {5.0f, 5.0f, 0}}};
+const light sceneLight = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {0, 0, 0}}};
 // const light sceneLight2 = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {-5.0f, 5.0f, 0}}};
 const light sceneLight2 = {.type = POINT, .ambinentFactor = .2f, .l.point = {.color = {1, 1, 1}, .location = {0.0f, 10.0f, -4.0f}}};
 light l;
@@ -267,7 +269,7 @@ void buildScene2(object **list)
     time_t t;
     /* Intializes random number generator */
     srand((unsigned) time(&t));
-    for(int i = 0; i < 1000; i++)
+    for(int i = 0; i < 10; i++)
     {
         float locationR = mapToRangef(((float)rand()/(float)(RAND_MAX)), 0, 1, 4, 18);
         float phi = (float) (mapToRangef(((float)rand()/(float)(RAND_MAX)), 0, 1, -180, 180) * M_PI / 180);
@@ -303,17 +305,19 @@ void parseArguments(int argc, char **argv)
         static struct option long_options[] =
             {
                 /* These options set a flag. */
+#if !ANAGLYPH
                 {"ref",     no_argument,  &buildRef, 1},
+                {"file",    required_argument,  0, 'f'},
+#else
                 {"toe",     no_argument,       &toe, 0},
+#endif
                 /* These options don’t set a flag.
                    We distinguish them by their indices. */
                 {"xres",    required_argument,  0, 'x'},
                 {"yres",    required_argument,  0, 'y'},
                 {"width",   required_argument,  0, 'w'},
                 {"height",  required_argument,  0, 'h'},
-                {"file",    required_argument,  0, 'f'},
                 {"shift",   required_argument,  0, 's'},
-                {"color",   required_argument,  0, 'c'},
                 {"dist",    required_argument,  0, 'd'},
                 
                 {0, 0, 0, 0}
@@ -411,7 +415,7 @@ int main(int argc, char **argv)
     char* right =  calloc((size_t) (xres * yres * 3), sizeof(char));
     char* i = right;
 #else
-    char* i = image
+    char* i = image;
 #endif
 
 
@@ -450,16 +454,20 @@ int main(int argc, char **argv)
         //Build List
         if (buildRef)
         {
-            l = refLight;
+            buildRef++;
+            printf("Rendering reference\n");
+            l = sceneLight2;
             file = "reference.png";
             buildScene1(&objects);
         }
         else
         {
+            buildRef++;
+            continue;
             l = sceneLight;
             buildScene2(&objects);
         }
-        buildRef++;
+        
 #endif
         
 
@@ -519,7 +527,7 @@ int main(int argc, char **argv)
     ///TODO Combine images
     float pixelWidth = getPixelWidth(p.width, p.res_x);
 #define ABS(x) ( x < 0 ? -x : x )
-    int shiftPixels = ABS(((shift[0] / pixelWidth) - 1)); 
+    int shiftPixels = (!toe ? ABS(((shift[0] / pixelWidth) - 1)) : 0); 
     
     int newXres = xres - shiftPixels;
     int newSize = newXres * yres * 3;
@@ -549,31 +557,44 @@ int main(int argc, char **argv)
             unsigned int leftX = x;
             if(!toe)
                 leftX += shiftPixels;
+            
+            if( x == 444 && y == 783 )
+            {
+                volatile int s = 0;
+                s++;
+            }
             unsigned int rightX = x;
             unsigned int imageR = XY2INDEX(x, y, 0, newXres, 3);
             unsigned int imageG = XY2INDEX(x, y, 1, newXres, 3);
             unsigned int imageB = XY2INDEX(x, y, 2, newXres, 3);
-            unsigned int leftR = left[XY2INDEX(leftX, y, 0, xres, 3)];
-            unsigned int leftG = left[XY2INDEX(leftX, y, 1, xres, 3)];
-            unsigned int leftB = left[XY2INDEX(leftX, y, 2, xres, 3)];
-            unsigned int rightR = right[XY2INDEX(rightX, y, 0, xres, 3)];
-            unsigned int rightG = right[XY2INDEX(rightX, y, 1, xres, 3)];
-            unsigned int rightB = right[XY2INDEX(rightX, y, 2, xres, 3)];
+            unsigned int leftRi = XY2INDEX(leftX, y, 0, xres, 3);
+            unsigned int leftGi = XY2INDEX(leftX, y, 1, xres, 3);
+            unsigned int leftBi = XY2INDEX(leftX, y, 2, xres, 3);
+            unsigned int rightRi = XY2INDEX(rightX, y, 0, xres, 3);
+            unsigned int rightGi = XY2INDEX(rightX, y, 1, xres, 3);
+            unsigned int rightBi = XY2INDEX(rightX, y, 2, xres, 3);
+            unsigned int leftR = (unsigned char)left[leftRi];
+            unsigned int leftG = (unsigned char)left[leftGi];
+            unsigned int leftB = (unsigned char)left[leftBi];
+            unsigned int rightR = (unsigned char)right[rightRi];
+            unsigned int rightG = (unsigned char)right[rightGi];
+            unsigned int rightB = (unsigned char)right[rightBi];
             
-            unsigned int leftGreyA = (leftR + leftG + leftB)/3;
-            unsigned int rightGreyA = (rightR + rightG + rightB)/3;
+            unsigned int leftGreyA = ((float)leftR + (float)leftG + (float)leftB)/3.0f;
+            unsigned int rightGreyA = ((float)rightR + (float)rightG + (float)rightB)/3.0f;
             #define MIN(x, y) ((x < y) ? x : y)
             #define MAX(x, y) ((x > y) ? x : y)
-            unsigned int leftGreyLight = ( MAX(MAX(leftR, leftB), leftG) + MIN(MIN(leftR, leftB), leftG) ) / 2;
-            unsigned int rightGreyLight = ( MAX(MAX(rightR, rightG), rightB) + MIN(MIN(rightR, rightG), rightB) ) / 2;
+            unsigned int leftGreyLight = ((float)( MAX(MAX(leftR, leftB), leftG) + MIN(MIN(leftR, leftB), leftG) )) / 2.0f;
+            unsigned int rightGreyLight = ((float)( MAX(MAX(rightR, rightG), rightB) + MIN(MIN(rightR, rightG), rightB) )) / 2.0f;
             
-            unsigned int leftGreyLu = .21f * (float)leftR + .72f * (float)leftG + .07f * (float)leftB;
-            unsigned int rightGreyLu = .21f * (float)rightR + .72f * (float)rightG + .07f * (float)rightB;
+            unsigned int leftGreyLu = .3f * (float)leftR + .59f * (float)leftG + .11f * (float)leftB;
+            unsigned int rightGreyLu = .3f * (float)rightR + .59f * (float)rightG + .11f * (float)rightB;
             
+            //printf("\t\tLu\t\tLi\t\tAve\nLeft:\t%f\t\t%f\t\t%f\nRight:\t%f\t\t%f\t\t%f\n\n",leftGreyLu, leftGreyLight, leftGreyA, rightGreyLu, rightGreyLight, rightGreyA); 
             
-            image[imageR] = leftGreyA;
-            image[imageG] = rightGreyA;
-            image[imageB] = rightGreyA;
+            image[imageR] = leftGreyLu;
+            image[imageG] = rightGreyLu;
+            image[imageB] = rightGreyLu;
         }
     }
     file = "referenceG.png";
@@ -584,6 +605,7 @@ int main(int argc, char **argv)
     {
         for (unsigned int x = 0; x < newXres; x++)
         {
+            
             unsigned int leftX = x + shiftPixels;
             unsigned int rightX = x;
             unsigned int imageR = XY2INDEX(x, y, 0, newXres, 3);
