@@ -23,12 +23,12 @@ Creates Left Eye and Right Eye images, as well as Greyscale and Color anaglyphs
 Units are in meters
 
 Defaults:
-Xres: 512 px
-Yres: 512 px
-View Width: 4 m
-View Height: 4 m
-View Plane Distnce: 2 m
-Camera Shift: .06 m
-Toeing: Disabled
+- Xres: 512 px
+- Yres: 512 px
+- View Width: 4 m
+- View Height: 4 m
+- View Plane Distnce: 2 m
+- Camera Shift: .06 m
+- Toeing: Disabled
 
 
