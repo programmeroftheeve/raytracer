@@ -44,7 +44,7 @@
 #define SHADING 0
 
 #ifndef ANAGLYPH
-#define ANAGLYPH 0
+#define ANAGLYPH 1
 #endif
 const light refLight = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {3, 5, -15}}};
 const light sceneLight = {.type = POINT, .ambinentFactor = .1f, .l.point = {.color = {1, 1, 1}, .location = {0, 0, 0}}};
@@ -310,6 +310,7 @@ void parseArguments(int argc, char **argv)
                 {"file",    required_argument,  0, 'f'},
 #else
                 {"toe",     no_argument,       &toe, 0},
+                {"shift",   required_argument,  0, 's'},
 #endif
                 /* These options don’t set a flag.
                    We distinguish them by their indices. */
@@ -317,7 +318,6 @@ void parseArguments(int argc, char **argv)
                 {"yres",    required_argument,  0, 'y'},
                 {"width",   required_argument,  0, 'w'},
                 {"height",  required_argument,  0, 'h'},
-                {"shift",   required_argument,  0, 's'},
                 {"dist",    required_argument,  0, 'd'},
                 
                 {0, 0, 0, 0}
@@ -406,6 +406,8 @@ int main(int argc, char **argv)
     
     shift[0] = -xShift/2;
     vector3f_add(camPos, shift);
+    if(!toe)
+        vector3f_add(lookat, shift);
     shift[0] = xShift;
 #endif
     
@@ -524,7 +526,6 @@ int main(int argc, char **argv)
     } while(buildRef < 2);
     
 #if ANAGLYPH == 1
-    ///TODO Combine images
     float pixelWidth = getPixelWidth(p.width, p.res_x);
 #define ABS(x) ( x < 0 ? -x : x )
     int shiftPixels = (!toe ? ABS(((shift[0] / pixelWidth) - 1)) : 0); 
