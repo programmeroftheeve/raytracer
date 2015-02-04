@@ -1,14 +1,34 @@
 Raytracer
 =========
-How to build: cmake . && make
+How to build:
+mkdir build && cd build
+cmake ..
+make
 
 Running
 =======
-./raytrace [--ref] [-x xres] [-y yres] [-h height] [-w width]
+./raytrace [--ref] [-x xres] [-y yres] [-h height] [-w width] [-d view dist]
 
-raytrace without arguments builds both the reference and a custom scene.
-The defaults for resolution is 512x512, and the dimensions of the image plane defualts to 2x2.
+Raytrace without arguments builds the reference.
+The defaults for resolution is 512x512, and the dimensions of the image plane defualts to 4x4.
 
-The custom scene is consisted of 1000 randomly generated spheres of various materials and sizes, as well as a floor.
-Materials are randomly generated to be reflective and have random colors.
-This is used to show how the reflections work with a large amount of geometry.
+Anaglyph
+========
+Change #define ANAGLYPH 0 in main.c to 1
+And then build
+
+./raytrace [-x final xres] [-y final yres] [-w view width] [-h view height] [-s camera shift distance] [-d view dist] [-t|--toe]
+
+Creates Left Eye and Right Eye images, as well as Greyscale and Color anaglyphs
+Units are in meters
+
+Defaults:
+Xres: 512 px
+Yres: 512 px
+View Width: 4 m
+View Height: 4 m
+View Plane Distnce: 2 m
+Camera Shift: .06 m
+Toeing: Disabled
+
+
