@@ -34,15 +34,7 @@ void printSampler(const sampler s)
 
 
 
-static inline float getPixelWidth(float screenWidth, float res_x)
-{
-    return screenWidth / res_x;
-}
 
-static inline float getPixelHeight(float screenHeight, float res_y)
-{
-    return screenHeight / res_y;
-}
 
 
 /**

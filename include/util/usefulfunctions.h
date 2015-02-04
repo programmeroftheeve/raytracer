@@ -67,4 +67,14 @@ static inline bool quadratic(const float a, const float b, const float c, float*
     return true;
 }
 
+static inline float getPixelWidth(float screenWidth, float res_x)
+{
+    return screenWidth / res_x;
+}
+
+static inline float getPixelHeight(float screenHeight, float res_y)
+{
+    return screenHeight / res_y;
+}
+
 #endif // _USEFULFUNCTIONS_H_

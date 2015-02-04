@@ -117,6 +117,68 @@ int imageout(const imageio_info *iio_info, void* array)
 	return 1;
 }
 
+/** Writes the given image stored in "array" out to the filename
+ * specified in iio_info. Returns 1 if successful. Prints an error
+ * message and returns 0 if there is a failure. */
+int imagedisplay(const imageio_info *iio_info, void* array)
+{
+	Image *image = NULL;
+	ImageInfo *image_info = CloneImageInfo((ImageInfo*)NULL);
+	ExceptionInfo exception;
+
+	if(IMAGEIO_DEBUG) {
+		printf("imageout %s: Trying to write file with %lu bit/channel.\n", iio_info->filename, iio_info->depth);
+		printf("imageout %s: You provided %d bit/channel %s.\n",
+		       iio_info->filename, 8*imageio_type_to_bytes(iio_info->type), iio_info->map);
+		printf("imageout %s: Dimensions: %lu x %lu\n", iio_info->filename, iio_info->width, iio_info->height);
+	}
+
+	//if(!IsMagickInstantiated())
+	MagickCoreGenesis(NULL, MagickTrue);
+
+	GetExceptionInfo(&exception);
+	image = ConstituteImage(iio_info->width, iio_info->height, iio_info->map,
+	                        iio_info->type, array, &exception);
+
+	/* Tell imagemagick the colorspace of our data. If the colorspace
+	   is CMYK and the output file supports it, imagemagick may output
+	   a CMYK file. */
+	image->colorspace = iio_info->colorspace;
+
+	MagickError(exception.severity, exception.reason, exception.description);
+	image = imageio_flip(image);
+
+	SyncAuthenticPixels(image, &image->exception);
+
+	/* Set image comment */
+	if(iio_info->comment != NULL)
+		SetImageProperty(image, "comment", iio_info->comment);
+
+	/* Set other image information. */
+	image_info->quality = iio_info->quality;
+	image_info->depth   = iio_info->depth;
+	image->depth        = iio_info->depth;
+	strncpy(image_info->filename, iio_info->filename, MaxTextExtent-1);
+	strncpy(image->filename, iio_info->filename, MaxTextExtent-1);
+	/* Write the image out to a file */
+	if(DisplayImages(image_info, image) == MagickFalse)
+	{
+		fprintf(stderr, "imageout %s: ERROR %s\n", iio_info->filename, image->exception.reason);
+		return 0;
+	}
+	DestroyImageInfo(image_info);
+	DestroyImage(image);
+	DestroyExceptionInfo(&exception);
+	// No real need to destroy the MagickCore environment, the user
+	// might try to load another texture later...
+	//MagickCoreTerminus();
+
+	if(IMAGEIO_DEBUG)
+		printf("imageout %s: DONE\n", iio_info->filename);
+
+	return 1;
+}
+
 
 /** Reads an image from disk and returns the resulting image data in
  * an array.

@@ -132,6 +132,7 @@ typedef struct {
 
 void* imagein(imageio_info *iio_info);
 int imageout(const imageio_info *iio_info, void* array);
+int imagedisplay(const imageio_info *iio_info, void* array);
 char* image_label(const char *label, int *width, int *height, float color[3], float bgcolor[4], double pointsize);
 
 #ifdef __cplusplus
